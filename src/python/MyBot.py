@@ -28,42 +28,42 @@ pi = pigpio.pi()
 
 class Proximity(object):
         
-        def __init__(self, pin):
-                self.pin = pin
-                pi.set_pull_up_down(pin, pigpio.PUD_UP)
-                #self.cb = pi.callback(pin, pigpio.RISING_EDGE) #, cb)
+    def __init__(self, pin):
+        self.pin = pin
+        pi.set_pull_up_down(pin, pigpio.PUD_UP)
+        #self.cb = pi.callback(pin, pigpio.RISING_EDGE) #, cb)
 
-        def _cb(self, gpio, level, tick):
-                sys.out.write('!')
-                
-        def isClose(self):
-                return pi.read(self.pin) == 0
+    def _cb(self, gpio, level, tick):
+        sys.out.write('!')
+            
+    def isClose(self):
+        return pi.read(self.pin) == 0
 
 
 proximityLeft = Proximity(DL)
 proximityRight = Proximity(DR)
 
 class Servo(object):
-        def __init__(self, pin, angle = 0, angleRange = 90, pulseWidthRange = 500):
-                self.angleRange = angleRange
-                self.pulseWidthRange = pulseWidthRange
-                self.pin = pin
-                pw = self._pulseWidth(angle)
-                pi.set_servo_pulsewidth(self.pin, pw)
+    def __init__(self, pin, angle = 0, angleRange = 90, pulseWidthRange = 500):
+            self.angleRange = angleRange
+            self.pulseWidthRange = pulseWidthRange
+            self.pin = pin
+            pw = self._pulseWidth(angle)
+            pi.set_servo_pulsewidth(self.pin, pw)
 
-        def _pulseWidth(self, angle):
-                # neutral is 1.5ms pulse
-                # +-0.5ms is 90 degrees, depending on servo
-                if angle > 0: angle = min(angle, self.angleRange)
-                else: angle = max(angle, -self.angleRange)
-                return 1500 + self.pulseWidthRange * angle / self.angleRange
-                
-        def setAngle(self, angle):
-                pw = self._pulseWidth(angle)
-                pi.set_servo_pulsewidth(self.pin, pw)
+    def _pulseWidth(self, angle):
+            # neutral is 1.5ms pulse
+            # +-0.5ms is 90 degrees, depending on servo
+            if angle > 0: angle = min(angle, self.angleRange)
+            else: angle = max(angle, -self.angleRange)
+            return 1500 + self.pulseWidthRange * angle / self.angleRange
+            
+    def setAngle(self, angle):
+            pw = self._pulseWidth(angle)
+            pi.set_servo_pulsewidth(self.pin, pw)
 
-        def off(self):
-                pi.set_servo_pulsewidth(self.pin, 0)
+    def off(self):
+            pi.set_servo_pulsewidth(self.pin, 0)
                 
                 
 class Motor(object):
@@ -170,12 +170,12 @@ class MotorController:
                 self.name = name
                 self.motor = motor
                 self.counter = counter
-                self.pid = PID(1, 1, 1.3, Integrator_max=100, Integrator_min=-100)
+                self.pid = PID(1, 0.3, 0.2, I_max=100, I_min=-100)
                 self.lastUpdateTime = time.time()
                 
 
                 
-        def update(self):
+        def update(self, debug=False):
                 t = time.time()
                 if t - self.lastUpdateTime < 0.100:
                         return
@@ -190,13 +190,15 @@ class MotorController:
                 power = self.pid.update(t, countRate)
                 if power is None: return
 
-                print '%s  %6.2f %6.2f  %6.2f  %6.2f  %6.2f' % (self.name, countRate, self.pid.P, self.pid.I, self.pid.D, power), 
+                if debug:
+                        print '%s  %6.2f %6.2f  %6.2f  %6.2f  %6.2f' % (self.name, countRate, self.pid.P, self.pid.I, self.pid.D, power), 
                 if power > 0:
                         power = min(power, 100)
                 else:
                         power = max(power, -100)
                 self.motor.setPower(power)
-                print ' %6.2f' % power
+                if debug:
+                        print ' %6.2f' % power
 
         def setSpeed(self, speed):
                 self.pid.setPoint(time.time(), speed)
@@ -244,101 +246,89 @@ def testMotorCounter():
                 print power, counter.speed()
                 
 def testMotor():
-        left  = Motor(MLIN1, MLIN2, MLEN)
-        right = Motor(MRIN2, MRIN1, MREN)
-        stepSize = 10
-        power = 0
-        step = stepSize
+	left  = Motor(MLIN1, MLIN2, MLEN)
+	right = Motor(MRIN2, MRIN1, MREN)
+	stepSize = 10
+	power = 0
+	step = stepSize
         
-        while 1:
-                print power
-                left.setPower(power)
-                right.setPower(power)
-                time.sleep(1.0)
-                power += step
-                if power > 100: step = -stepSize
-                elif power < -100: step = stepSize
+	while 1:
+		print power
+		left.setPower(power)
+		right.setPower(power)
+		time.sleep(1.0)
+		power += step
+		if power > 100: step = -stepSize
+		elif power < -100: step = stepSize
 
 def testProximity():
-        while 1:
-                print proximityLeft.isClose(), proximityRight.isClose()
-                time.sleep(0.2)
+	while 1:
+		print proximityLeft.isClose(), proximityRight.isClose()
+		time.sleep(0.2)
 
-        
+
+
+def mainLoop():
+	pass
+	
+	
+
 if __name__ == '__main__':
-        try:
+	try:
 
 		#testServo(Servo1Pin, -30, +30, 5)
-                #testServo(Servo2Pin, -90, +90)
+		#testServo(Servo2Pin, -90, +90)
 		#testMotor()
-                #testMotorCounter()
-                testProximity()
+		#testMotorCounter()
+		#testProximity()
                 
-                import argparse
+		import argparse
 
-                parser = argparse.ArgumentParser()
-                parser.add_argument('speed', type=float)
-                args = parser.parse_args()
-                print args.speed
-                
-                speed = args.speed
+		parser = argparse.ArgumentParser()
+		parser.add_argument('speed', type=float)
+		args = parser.parse_args()
+		print args.speed
+		
+		speed = args.speed
 
 
-                m = left
-                def do(s):
-                        print s
-                        m.motor.setPower(s)
-                        for i in range(4):
-                                time.sleep(0.5)
-                                print m.counter.count
+		left.setSpeed(0)
+		right.setSpeed(0)
+		updated = False
 
-                if 0:
-                        #speed = 0
-                        #Ab.setMotor(speed, speed)
-                        #Ab.forward()
-                        #time.sleep(2.0)
+		tStart = time.time()
+		tPower = tStart + 2.0
+		powerPeriod = 5.0
+		
+		dt = 0.100 # could adjust depending on speed... or integrate speed over longer time...
+		while True:
+			t = time.time()
+			
+			
+			# let counters init before applying power
+			if not updated and t > tPower:
+					left.setSpeed(speed)
+					right.setSpeed(speed)
+					#updated = True
+					tPower = t + powerPeriod
+					speed = -speed
+					
+			# TODO: only update PID when new speed is available!?
+			time.sleep(dt)
+			
+			print '%.3f' % (t - tStart), 
+			left.update(True)
+			right.update()
 
-                        while True:
-                                do(-100)
-                                do(-50)
-                                do(0)
-                                do(30)
-                                do(50)
-                                do(100)
-
-                #h = [0] * 30
-                left.setSpeed(0)
-                right.setSpeed(0)
-                updated = False
-
-                tStart = time.time()
-                tPower = tStart + 2.0
-                dt = 0.100 # could adjust depending on speed... or integrate speed over longer time...
-                while True:
-                        t = time.time()
-                        # let counters init
-                        if not updated and t > tPower:
-                                left.setSpeed(speed)
-                                right.setSpeed(speed)
-                                updated = True
-                                
-                        # TODO: only update PID when new speed is available!?
-                        time.sleep(dt)
-                        
-                        left.update()
-                        right.update()
-
-                        # TODO: heading control, regulating difference to 0, adjusting speed for L/R
-                        cl = left.counter.count()
-                        cr = right.counter.count()
-                        print '%.3f' % (t - tStart), cl, cr, cl - cr
-                        #print ' '.join('%.3f' % dt for dt in right.counter.times)
-                        #dts = right.counter.times
-                        #print mean(dts), np.std(dts)
-        except:
-                raise
-        finally:
-                #left.motor.stop()
-                #right.motor.stop()
-                pi.stop()
+			# TODO: heading control, regulating difference to 0, adjusting speed for L/R
+			cl = left.counter.count()
+			cr = right.counter.count()
+			#print '%.3f' % (t - tStart), cl, cr, cl - cr
+			#print ' '.join('%.3f' % dt for dt in right.counter.times)
+			#dts = right.counter.times
+			#print mean(dts), np.std(dts)
+	finally:
+		left.motor.stop()
+		right.motor.stop()
+		pi.stop()
 
