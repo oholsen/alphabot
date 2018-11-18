@@ -9,7 +9,7 @@ class PID:
         self.Ti = Ti
         self.Td = Td
 
-        self.I = None
+        self.I = 0 # None
         self.I_max = I_max
         self.I_min = I_min
         
@@ -61,7 +61,7 @@ class PID:
 
     def setPoint(self, t, set_point):
         """
-        Initilize the setpoint of PID
+        Initialize the setpoint of PID
         """
         self.set_point = set_point
         self.I = 0

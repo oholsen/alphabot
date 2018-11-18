@@ -170,7 +170,7 @@ class MotorController:
                 self.name = name
                 self.motor = motor
                 self.counter = counter
-                self.pid = PID(1, 0.3, 0.2, I_max=100, I_min=-100)
+                self.pid = PID(1, 0.3, 0, I_max=100, I_min=-100)
                 self.lastUpdateTime = time.time()
                 
 
@@ -202,6 +202,10 @@ class MotorController:
 
         def setSpeed(self, speed):
                 self.pid.setPoint(time.time(), speed)
+
+        def stop(self):
+            self.setSpeed(0)
+            
 
 left  = MotorController('L', Motor(MLIN1, MLIN2, MLEN), Counter(CNTL))
 right = MotorController('R', Motor(MRIN2, MRIN1, MREN), Counter(CNTR))
@@ -268,67 +272,76 @@ def testProximity():
 
 
 
-def mainLoop():
-	pass
-	
+def testSpeed(speed):
+    
+    left.setSpeed(0)
+    right.setSpeed(0)
+
+    tStart = time.time()
+    # let counters init before applying power
+    tSpeed = tStart + 2.0
+    speedDuration = 5.0
+    stopDuration = 0.3    
+    dt = 0.050 # could adjust depending on speed... or integrate speed over longer time...
+    stopped = True
+
+    while True:
+        t = time.time()
+        
+        if not stopped and t > tSpeed:
+            left.stop()
+            right.stop()
+            print 'Stop'
+            
+        if not stopped and t > tSpeed + stopDuration:
+            stopped = True
+            print 'Stopped'
+            
+        if stopped and t > tSpeed:
+            left.setSpeed(speed)
+            right.setSpeed(speed)
+            tSpeed = t + speedDuration
+            speed = -speed
+            stopped = False
+            print 'Start'
+        
+        
+        # NEED TO STOP ENTIRELY BEFORE THROTTLING BACK UP
+        
+        
+        time.sleep(dt)
+        
+        print '%.3f' % (t - tStart), 
+        left.update(True)
+        right.update()
+
+        if 0:
+            # TODO: heading control, regulating difference to 0, adjusting speed for L/R
+            cl = left.counter.count()
+            cr = right.counter.count()
+            #print '%.3f' % (t - tStart), cl, cr, cl - cr
 	
 
 if __name__ == '__main__':
-	try:
+    
+    try:
 
-		#testServo(Servo1Pin, -30, +30, 5)
-		#testServo(Servo2Pin, -90, +90)
-		#testMotor()
-		#testMotorCounter()
-		#testProximity()
+        #testServo(Servo1Pin, -30, +30, 5)
+        #testServo(Servo2Pin, -90, +90)
+        #testMotor()
+        #testMotorCounter()
+        #testProximity()
                 
-		import argparse
+        import argparse
 
-		parser = argparse.ArgumentParser()
-		parser.add_argument('speed', type=float)
-		args = parser.parse_args()
-		print args.speed
-		
-		speed = args.speed
+        parser = argparse.ArgumentParser()
+        parser.add_argument('speed', type=float)
+        args = parser.parse_args()
+        print args.speed
+        testSpeed(args.speed)
 
-
-		left.setSpeed(0)
-		right.setSpeed(0)
-		updated = False
-
-		tStart = time.time()
-		tPower = tStart + 2.0
-		powerPeriod = 5.0
-		
-		dt = 0.100 # could adjust depending on speed... or integrate speed over longer time...
-		while True:
-			t = time.time()
-			
-			
-			# let counters init before applying power
-			if not updated and t > tPower:
-					left.setSpeed(speed)
-					right.setSpeed(speed)
-					#updated = True
-					tPower = t + powerPeriod
-					speed = -speed
-					
-			# TODO: only update PID when new speed is available!?
-			time.sleep(dt)
-			
-			print '%.3f' % (t - tStart), 
-			left.update(True)
-			right.update()
-
-			# TODO: heading control, regulating difference to 0, adjusting speed for L/R
-			cl = left.counter.count()
-			cr = right.counter.count()
-			#print '%.3f' % (t - tStart), cl, cr, cl - cr
-			#print ' '.join('%.3f' % dt for dt in right.counter.times)
-			#dts = right.counter.times
-			#print mean(dts), np.std(dts)
-	finally:
-		left.motor.stop()
-		right.motor.stop()
-		pi.stop()
+    finally:
+        left.motor.stop()
+        right.motor.stop()
+        pi.stop()
 
