@@ -202,14 +202,48 @@ class MotorController:
                         print(' %6.2f' % power)
 
         def setSpeed(self, speed):
-                self.pid.setPoint(time.time(), speed)
+             self.pid.setPoint(time.time(), speed)
 
+        def getSpeed(self):
+             return self.pid.getPoint()
+				
         def stop(self):
             self.setSpeed(0)
             
 
 left  = MotorController('L', Motor(MLIN1, MLIN2, MLEN), Counter(CNTL))
 right = MotorController('R', Motor(MRIN2, MRIN1, MREN), Counter(CNTR))
+
+
+
+
+class AlphaBot():
+
+	def __init__(self):
+		pass
+		
+	def isClose(self):
+		return proximityLeft.isClose() or proximityRight.isClose()
+	
+	def setSpeed(self, speed):
+		print("speed", speed)
+		left.setSpeed(speed)
+		right.setSpeed(speed)
+		
+	def getSpeed(self):
+		return 0.5 * (left.getSpeed() + right.getSpeed())
+		
+	def setTurnSpeed(self, speed, turnSpeed):
+		print("turn", speed, turnSpeed)
+		left.setSpeed(speed + turnSpeed)
+		right.setSpeed(speed - turnSpeed)
+        
+	def update(self):
+		left.update()
+		right.update()
+		
+		
+alphabot = AlphaBot()
 
 
 def testServo(pin, angleMin, angleMax, step=1):
@@ -227,6 +261,7 @@ def testServo(pin, angleMin, angleMax, step=1):
             dangle = step
         print('%d' % angle)
         servo.setAngle(angle)
+
 
 def testMotorCounter():
     motor   = Motor(MLIN1, MLIN2, MLEN)
@@ -324,10 +359,26 @@ def testSpeed(speed):
 
 @asyncio.coroutine
 def controlLoop(dt):
-    while True:
-        yield from asyncio.sleep(dt)
-        left.update()
-        right.update()
+	while True:
+		yield from asyncio.sleep(dt)
+		print(alphabot.isClose(), alphabot.getSpeed())        
+		if alphabot.isClose() and alphabot.getSpeed() > 0:
+			# set speed here and not in task to avoid multiple tasks
+			alphabot.setSpeed(-20)
+			loop.create_task(avoidObstacle())
+		alphabot.update()
+
+
+#@asyncio.coroutine
+def avoidObstacle():
+	print("avoidObstacle")
+
+	yield from asyncio.sleep(4)
+
+	alphabot.setTurnSpeed(0, 20)
+	yield from asyncio.sleep(3)
+
+	alphabot.setSpeed(20)
 
 
 @asyncio.coroutine
@@ -337,13 +388,13 @@ def speedLoop():
     yield from asyncio.sleep(2)
     
     while True:
-        print("speed", speed)
-        left.setSpeed(speed)
-        right.setSpeed(speed)
+        
+        alphabot.setSpeed(speed)
+        break
+        
         yield from asyncio.sleep(5)
-        print("speed", -speed)
-        left.setSpeed(-speed)
-        right.setSpeed(-speed)
+        
+        alphabot.setSpeed(-speed)
         yield from asyncio.sleep(5)
 
 
@@ -373,11 +424,14 @@ if __name__ == '__main__':
         loop = asyncio.get_event_loop()
         tasks = [
             asyncio.Task(controlLoop(0.050)),
-            asyncio.Task(speedLoop())]
+            asyncio.Task(speedLoop())
+            ]
         loop.run_until_complete(asyncio.wait(tasks))
         loop.close()
 
     finally:
+        loop.stop()
+        loop.close()
         left.motor.stop()
         right.motor.stop()
         pi.stop()
