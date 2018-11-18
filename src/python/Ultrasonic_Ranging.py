@@ -23,8 +23,8 @@ def dist():
 
 try:
 	while True:
-		print "HELLO"
-		print "Distance:%0.2f cm" % dist()
+		print("HELLO")
+		print("Distance:%0.2f cm" % dist())
 		time.sleep(1)
 except KeyboardInterrupt:
 	GPIO.cleanup()

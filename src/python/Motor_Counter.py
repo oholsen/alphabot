@@ -38,7 +38,7 @@ class Servo(object):
 
                 if angle > 0: angle = min(angle, self.angleRange)
                 else: angle = max(angle, -self.angleRange)
-                print angle
+                print(angle)
                 return 100.0 * (1.5 + 0.5 * angle / self.angleRange) / 20
                 #return 12.5 - 10.0 * float(angle) / 180
                 
@@ -152,13 +152,13 @@ class MotorCounter:
                         
                 power = self.pid.update(t, countRate)
                 if power is None: return
-                print '%s  %6.2f %3d %6.2f  %6.2f  %6.2f  %6.2f' % (self.name, countRate, dcount, self.pid.P, self.pid.I, self.pid.D, power), 
+                print('%s  %6.2f %3d %6.2f  %6.2f  %6.2f  %6.2f' % (self.name, countRate, dcount, self.pid.P, self.pid.I, self.pid.D, power), end=' ') 
                 if power > 0:
                         power = min(power, 100)
                 else:
                         power = max(power, -100)
                 self.motor.setPower(power)
-                print ' %6.2f' % power
+                print(' %6.2f' % power)
 
                 if 0:
                         self.lastCount = count
@@ -187,7 +187,7 @@ if __name__ == '__main__':
         parser = argparse.ArgumentParser()
         parser.add_argument('speed', type=float)
         args = parser.parse_args()
-        print args.speed
+        print(args.speed)
         
         left  = MotorCounter('L', Motor(MLIN1, MLIN2, MLEN), Counter(CNTL))
         right = MotorCounter('R', Motor(MRIN2, MRIN1, MREN), Counter(CNTR))
@@ -200,11 +200,11 @@ if __name__ == '__main__':
 
                 m = left
                 def do(s):
-                        print s
+                        print(s)
                         m.motor.setPower(s)
                         for i in range(4):
                                 time.sleep(0.5)
-                                print m.counter.count
+                                print(m.counter.count)
 
                 if 0:
                         #speed = 0

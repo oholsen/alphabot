@@ -45,63 +45,63 @@ proximityRight = Proximity(DR)
 
 class Servo(object):
     def __init__(self, pin, angle = 0, angleRange = 90, pulseWidthRange = 500):
-            self.angleRange = angleRange
-            self.pulseWidthRange = pulseWidthRange
-            self.pin = pin
-            pw = self._pulseWidth(angle)
-            pi.set_servo_pulsewidth(self.pin, pw)
+		self.angleRange = angleRange
+		self.pulseWidthRange = pulseWidthRange
+		self.pin = pin
+		pw = self._pulseWidth(angle)
+		pi.set_servo_pulsewidth(self.pin, pw)
 
     def _pulseWidth(self, angle):
-            # neutral is 1.5ms pulse
-            # +-0.5ms is 90 degrees, depending on servo
-            if angle > 0: angle = min(angle, self.angleRange)
-            else: angle = max(angle, -self.angleRange)
-            return 1500 + self.pulseWidthRange * angle / self.angleRange
+		# neutral is 1.5ms pulse
+		# +-0.5ms is 90 degrees, depending on servo
+		if angle > 0: angle = min(angle, self.angleRange)
+		else: angle = max(angle, -self.angleRange)
+		return 1500 + self.pulseWidthRange * angle / self.angleRange
             
     def setAngle(self, angle):
-            pw = self._pulseWidth(angle)
-            pi.set_servo_pulsewidth(self.pin, pw)
+		pw = self._pulseWidth(angle)
+		pi.set_servo_pulsewidth(self.pin, pw)
 
     def off(self):
-            pi.set_servo_pulsewidth(self.pin, 0)
+		pi.set_servo_pulsewidth(self.pin, 0)
                 
                 
 class Motor(object):
 
-        def __init__(self, in1, in2, en):
-                self.IN1 = in1
-                self.IN2 = in2
-                self.EN = en
+	def __init__(self, in1, in2, en):
+		self.IN1 = in1
+		self.IN2 = in2
+		self.EN = en
 
-                pi.set_mode(self.IN1, pigpio.OUTPUT)
-                pi.set_mode(self.IN2, pigpio.OUTPUT)
-                pi.set_mode(self.EN, pigpio.OUTPUT)
+		pi.set_mode(self.IN1, pigpio.OUTPUT)
+		pi.set_mode(self.IN2, pigpio.OUTPUT)
+		pi.set_mode(self.EN, pigpio.OUTPUT)
 
-                self._stop()
-                pi.set_PWM_frequency(self.EN, 500)
+		self._stop()
+		pi.set_PWM_frequency(self.EN, 500)
 
-        def _stop(self):
-                pi.write(self.IN1, 0)
-                pi.write(self.IN2, 0)
+	def _stop(self):
+		pi.write(self.IN1, 0)
+		pi.write(self.IN2, 0)
 
-        def _forward(self):
-                pi.write(self.IN1, 1)
-                pi.write(self.IN2, 0)
+	def _forward(self):
+		pi.write(self.IN1, 1)
+		pi.write(self.IN2, 0)
 
-        def _backward(self):
-                pi.write(self.IN1, 0)
-                pi.write(self.IN2, 1)
+	def _backward(self):
+		pi.write(self.IN1, 0)
+		pi.write(self.IN2, 1)
 
-        def stop(self):
-                self._stop()
-                pi.set_PWM_dutycycle(self.EN, 0)
+	def stop(self):
+		self._stop()
+		pi.set_PWM_dutycycle(self.EN, 0)
 
-        def setPower(self, power):
-                if power >= 0:
-                        self._forward()
-                else:
-                        self._backward()
-                pi.set_PWM_dutycycle(self.EN, min(255, int(255.0 * abs(power) / 100)))
+	def setPower(self, power):
+		if power >= 0:
+			self._forward()
+		else:
+			self._backward()
+		pi.set_PWM_dutycycle(self.EN, min(255, int(255.0 * abs(power) / 100)))
 
 import sys
 def cb(gpio, level, tick):
@@ -153,9 +153,9 @@ class Counter(object):
                 dcount = count - clast
                 dt = t - tlast 
                 if 0:
-                        print
-                        print "speed", count, dcount, dt
-                        print
+                        print()
+                        print("speed", count, dcount, dt)
+                        print()
                 v = float(dcount) / dt
                 self._speed = self.alpha * v + (1 - self.alpha) * self._speed
                 #return self._speed, v, dcount, dt
@@ -191,14 +191,14 @@ class MotorController:
                 if power is None: return
 
                 if debug:
-                        print '%s  %6.2f %6.2f  %6.2f  %6.2f  %6.2f' % (self.name, countRate, self.pid.P, self.pid.I, self.pid.D, power), 
+                        print('%s  %6.2f %6.2f  %6.2f  %6.2f  %6.2f' % (self.name, countRate, self.pid.P, self.pid.I, self.pid.D, power), end=' ') 
                 if power > 0:
                         power = min(power, 100)
                 else:
                         power = max(power, -100)
                 self.motor.setPower(power)
                 if debug:
-                        print ' %6.2f' % power
+                        print(' %6.2f' % power)
 
         def setSpeed(self, speed):
                 self.pid.setPoint(time.time(), speed)
@@ -224,7 +224,7 @@ def testServo(pin, angleMin, angleMax, step=1):
                         dangle = -step
 		elif angle < angleMin:
 			dangle = +step
-		print '%d' % angle
+		print('%d' % angle)
                 servo.setAngle(angle)
 
 def testMotorCounter():
@@ -240,14 +240,14 @@ def testMotorCounter():
                 t = time.time()
                 dc = c - clast
                 dt = t - tlast
-                print dc, dt, dc / dt
+                print(dc, dt, dc / dt)
                 clast = c
                 tlast = t
 
         while 1:
                 time.sleep(0.1)
                 #print power, '%5.2f  %5.2f, %d %.3f' % counter.speed()
-                print power, counter.speed()
+                print(power, counter.speed())
                 
 def testMotor():
 	left  = Motor(MLIN1, MLIN2, MLEN)
@@ -257,7 +257,7 @@ def testMotor():
 	step = stepSize
         
 	while 1:
-		print power
+		print(power)
 		left.setPower(power)
 		right.setPower(power)
 		time.sleep(1.0)
@@ -267,7 +267,7 @@ def testMotor():
 
 def testProximity():
 	while 1:
-		print proximityLeft.isClose(), proximityRight.isClose()
+		print(proximityLeft.isClose(), proximityRight.isClose())
 		time.sleep(0.2)
 
 
@@ -291,11 +291,11 @@ def testSpeed(speed):
         if not stopped and t > tSpeed:
             left.stop()
             right.stop()
-            print 'Stop'
+            print('Stop')
             
         if not stopped and t > tSpeed + stopDuration:
             stopped = True
-            print 'Stopped'
+            print('Stopped')
             
         if stopped and t > tSpeed:
             left.setSpeed(speed)
@@ -303,7 +303,7 @@ def testSpeed(speed):
             tSpeed = t + speedDuration
             speed = -speed
             stopped = False
-            print 'Start'
+            print('Start')
         
         
         # NEED TO STOP ENTIRELY BEFORE THROTTLING BACK UP
@@ -311,7 +311,7 @@ def testSpeed(speed):
         
         time.sleep(dt)
         
-        print '%.3f' % (t - tStart), 
+        print('%.3f' % (t - tStart), end=' ') 
         left.update(True)
         right.update()
 
@@ -337,7 +337,7 @@ if __name__ == '__main__':
         parser = argparse.ArgumentParser()
         parser.add_argument('speed', type=float)
         args = parser.parse_args()
-        print args.speed
+        print(args.speed)
         testSpeed(args.speed)
 
     finally:

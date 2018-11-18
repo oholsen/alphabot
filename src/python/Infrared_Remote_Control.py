@@ -46,7 +46,7 @@ def getkey():
 				idx += 1
 			else:
 				cnt += 1
-		print data
+		print(data)
 		if data[0]+data[1] == 0xFF and data[2]+data[3] == 0xFF:  #check
 			return data[2]
 
