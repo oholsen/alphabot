@@ -1,4 +1,5 @@
 import time
+import asyncio
 from PID import PID
 import pigpio
 
@@ -320,7 +321,31 @@ def testSpeed(speed):
             cl = left.counter.count()
             cr = right.counter.count()
             #print '%.3f' % (t - tStart), cl, cr, cl - cr
+
+@asyncio.coroutine
+def controlLoop(dt):
+    while True:
+        yield from asyncio.sleep(dt)
+        left.update()
+        right.update()
+
+
+@asyncio.coroutine
+def speedLoop():
+
+    speed = 20
+    yield from asyncio.sleep(2)
     
+    while True:
+        print("speed", speed)
+        left.setSpeed(speed)
+        right.setSpeed(speed)
+        yield from asyncio.sleep(5)
+        print("speed", -speed)
+        left.setSpeed(-speed)
+        right.setSpeed(-speed)
+        yield from asyncio.sleep(5)
+
 
 if __name__ == '__main__':
     
@@ -338,7 +363,19 @@ if __name__ == '__main__':
         parser.add_argument('speed', type=float)
         args = parser.parse_args()
         print(args.speed)
-        testSpeed(args.speed)
+        #testSpeed(args.speed)
+
+        left.setSpeed(0)
+        right.setSpeed(0)
+
+        tStart = time.time()
+        
+        loop = asyncio.get_event_loop()
+        tasks = [
+            asyncio.Task(controlLoop(0.050)),
+            asyncio.Task(speedLoop())]
+        loop.run_until_complete(asyncio.wait(tasks))
+        loop.close()
 
     finally:
         left.motor.stop()
