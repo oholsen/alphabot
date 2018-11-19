@@ -16,6 +16,8 @@ MREN = 26
 
 Servo1Pin = 27 # pitch neg up
 Servo2Pin = 22 # yaw neg left
+ServoTiltPin = 27
+ServoPanPin = 22
 
 
 # Infrared detectors
@@ -45,7 +47,8 @@ proximityLeft = Proximity(DL)
 proximityRight = Proximity(DR)
 
 class Servo(object):
-    def __init__(self, pin, angle = 0, angleRange = 90, pulseWidthRange = 500):
+    def __init__(self, pin, angle = 0, angleRange = 90, pulseWidthRange = 500, centerAngle = 0):
+        self.centerAngle = centerAngle
         self.angleRange = angleRange
         self.pulseWidthRange = pulseWidthRange
         self.pin = pin
@@ -55,6 +58,7 @@ class Servo(object):
     def _pulseWidth(self, angle):
         # neutral is 1.5ms pulse
         # +-0.5ms is 90 degrees, depending on servo
+        angle += self.centerAngle
         if angle > 0: angle = min(angle, self.angleRange)
         else: angle = max(angle, -self.angleRange)
         return 1500 + self.pulseWidthRange * angle / self.angleRange
@@ -220,7 +224,9 @@ right = MotorController('R', Motor(MRIN2, MRIN1, MREN), Counter(CNTR))
 class AlphaBot():
 
 	def __init__(self):
-		pass
+		self.cameraPan = Servo(ServoPanPin, centerAngle = 25)
+		self.cameraTilt = Servo(ServoTiltPin, 5)
+		self.setSpeed(0)
 		
 	def isClose(self):
 		return proximityLeft.isClose() or proximityRight.isClose()
@@ -361,7 +367,7 @@ def testSpeed(speed):
 def controlLoop(dt):
 	while True:
 		yield from asyncio.sleep(dt)
-		print(alphabot.isClose(), alphabot.getSpeed())        
+		#print(alphabot.isClose(), alphabot.getSpeed())        
 		if alphabot.isClose() and alphabot.getSpeed() > 0:
 			# set speed here and not in task to avoid multiple tasks
 			alphabot.setSpeed(-20)
@@ -373,12 +379,12 @@ def controlLoop(dt):
 def avoidObstacle():
 	print("avoidObstacle")
 
-	yield from asyncio.sleep(4)
+	yield from asyncio.sleep(2.5)
 
 	alphabot.setTurnSpeed(0, 20)
-	yield from asyncio.sleep(3)
+	yield from asyncio.sleep(1.5)
 
-	alphabot.setSpeed(20)
+	alphabot.setSpeed(speed)
 
 
 @asyncio.coroutine
@@ -416,8 +422,6 @@ if __name__ == '__main__':
         print(args.speed)
         #testSpeed(args.speed)
 
-        left.setSpeed(0)
-        right.setSpeed(0)
 
         tStart = time.time()
         
