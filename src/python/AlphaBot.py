@@ -115,104 +115,102 @@ def cb(gpio, level, tick):
 
 class Counter(object):
 
-        """Cannot detect slow speeds, depending on integration/count time"""
-        
-        def __init__(self, pin):
-                self.cb = pi.callback(pin, pigpio.RISING_EDGE) #, cb)
-                #self.lastTime = time.time()
-                #self.lastCount = 0
-                self.alpha = 0.9
-                self._speed = 0
-                self.counts = [(time.time(), 0)]
-                self.n = 4
+    """Cannot detect slow speeds, depending on integration/count time"""
+    
+    def __init__(self, pin):
+        self.cb = pi.callback(pin, pigpio.RISING_EDGE) #, cb)
+        #self.lastTime = time.time()
+        #self.lastCount = 0
+        self.alpha = 0.9
+        self._speed = 0
+        self.counts = [(time.time(), 0)]
+        self.n = 4
 
-        def _cb(self, gpio, level, tick):
-                sys.out.write('!')
+    def _cb(self, gpio, level, tick):
+        sys.out.write('!')
+            
+    def speed(self):
+        # alpha depends on update rate....
+        # TODO: use time difference, automatic adjustment of alpha
+        # guard against calling too often...
+        t = time.time()
+        count = self.cb.tally()
+
+        if 0:
+            dcount = count - self.lastCount
+            dt = t - self.lastTime
+            self.lastTime = t
+            self.lastCount = count
+
+        for th, ch in self.counts:
+            # was 0.5 and 25
+            if t - th > 0.3 or count - ch > 10:
+                tlast, clast = th, ch
+                break
+        else:
+            tlast, clast = self.counts[-1]
                 
-        def speed(self):
-                # alpha depends on update rate....
-                # TODO: use time difference, automatic adjustment of alpha
-                # guard against calling too often...
-                t = time.time()
-                count = self.cb.tally()
+        self.counts.insert(0, (t, count))
+        while len(self.counts) > self.n:
+            self.counts.pop()
 
-                if 0:
-                        dcount = count - self.lastCount
-                        dt = t - self.lastTime
-                        self.lastTime = t
-                        self.lastCount = count
+        #print self.counts
+        dcount = count - clast
+        dt = t - tlast 
+        if 0:
+            print()
+            print("speed", count, dcount, dt)
+            print()
+        v = float(dcount) / dt
+        self._speed = self.alpha * v + (1 - self.alpha) * self._speed
+        #return self._speed, v, dcount, dt
+        return self._speed
 
-                for th, ch in self.counts:
-                        # was 0.5 and 25
-                        if t - th > 0.3 or count - ch > 10:
-                                tlast, clast = th, ch
-                                break
-                else:
-                        tlast, clast = self.counts[-1]
-                        
-                self.counts.insert(0, (t, count))
-                while len(self.counts) > self.n:
-                        self.counts.pop()
-
-                #print self.counts
-                dcount = count - clast
-                dt = t - tlast 
-                if 0:
-                        print()
-                        print("speed", count, dcount, dt)
-                        print()
-                v = float(dcount) / dt
-                self._speed = self.alpha * v + (1 - self.alpha) * self._speed
-                #return self._speed, v, dcount, dt
-                return self._speed
-
-        def count(self):
-                return self.cb.tally()
+    def count(self):
+        return self.cb.tally()
         
 class MotorController:
 
-        def __init__(self, name, motor, counter):
-                self.name = name
-                self.motor = motor
-                self.counter = counter
-                self.pid = PID(1, 0.3, 0, I_max=100, I_min=-100)
-                self.lastUpdateTime = time.time()
+    def __init__(self, name, motor, counter):
+        self.name = name
+        self.motor = motor
+        self.counter = counter
+        self.pid = PID(1, 0.3, 0, I_max=100, I_min=-100)
+        self.lastUpdateTime = time.time()
+            
+    def update(self, debug=False):
+        t = time.time()
+        if t - self.lastUpdateTime < 0.100:
+            return
+        
+        countRate = self.counter.speed()
+        #print self.counter.speed(), countRate, self.counter.times
+
+        # TODO: can set direction in counter
+        if self.pid.getPoint() < 0:
+            countRate = -countRate
                 
+        power = self.pid.update(t, countRate)
+        if power is None: return
 
-                
-        def update(self, debug=False):
-                t = time.time()
-                if t - self.lastUpdateTime < 0.100:
-                        return
-                
-                countRate = self.counter.speed()
-                #print self.counter.speed(), countRate, self.counter.times
+        if debug:
+            print('%s  %6.2f %6.2f  %6.2f  %6.2f  %6.2f' % (self.name, countRate, self.pid.P, self.pid.I, self.pid.D, power), end=' ') 
+        if power > 0:
+            power = min(power, 100)
+        else:
+            power = max(power, -100)
+        self.motor.setPower(power)
+        if debug:
+            print(' %6.2f' % power)
 
-                # TODO: can set direction in counter
-                if self.pid.getPoint() < 0:
-                        countRate = -countRate
-                        
-                power = self.pid.update(t, countRate)
-                if power is None: return
+    def setSpeed(self, speed):
+         self.pid.setPoint(time.time(), speed)
 
-                if debug:
-                        print('%s  %6.2f %6.2f  %6.2f  %6.2f  %6.2f' % (self.name, countRate, self.pid.P, self.pid.I, self.pid.D, power), end=' ') 
-                if power > 0:
-                        power = min(power, 100)
-                else:
-                        power = max(power, -100)
-                self.motor.setPower(power)
-                if debug:
-                        print(' %6.2f' % power)
-
-        def setSpeed(self, speed):
-             self.pid.setPoint(time.time(), speed)
-
-        def getSpeed(self):
-             return self.pid.getPoint()
-                
-        def stop(self):
-            self.setSpeed(0)
+    def getSpeed(self):
+         return self.pid.getPoint()
+            
+    def stop(self):
+        self.setSpeed(0)
             
 
 left  = MotorController('L', Motor(MLIN1, MLIN2, MLEN), Counter(CNTL))
@@ -259,116 +257,6 @@ class AlphaBot():
 alphabot = AlphaBot()
 
 
-def testServo(pin, angleMin, angleMax, step=1):
-    angle = 0
-    dangle = +step
-    servo = Servo(pin, angle)
-    servo.setAngle(angle)
-    while 1:
-        time.sleep(0.2)
-        #continue
-        angle += dangle
-        if angle > angleMax:
-            dangle = -step
-        elif angle < angleMin:
-            dangle = step
-        print('%d' % angle)
-        servo.setAngle(angle)
-
-
-def testMotorCounter():
-    motor   = Motor(MLIN1, MLIN2, MLEN)
-    counter = Counter(CNTL)
-    power = 70
-    motor.setPower(power)
-    clast = counter.cb.tally()
-    tlast = time.time()
-    while 1:
-        time.sleep(1.0)
-        c = counter.cb.tally()
-        t = time.time()
-        dc = c - clast
-        dt = t - tlast
-        print(dc, dt, dc / dt)
-        clast = c
-        tlast = t
-
-    while 1:
-        time.sleep(0.1)
-        #print power, '%5.2f  %5.2f, %d %.3f' % counter.speed()
-        print(power, counter.speed())
-                
-def testMotor():
-    left  = Motor(MLIN1, MLIN2, MLEN)
-    right = Motor(MRIN2, MRIN1, MREN)
-    stepSize = 10
-    power = 0
-    step = stepSize
-        
-    while 1:
-        print(power)
-        left.setPower(power)
-        right.setPower(power)
-        time.sleep(1.0)
-        power += step
-        if power > 100: step = -stepSize
-        elif power < -100: step = stepSize
-
-def testProximity():
-    while 1:
-        print(proximityLeft.isClose(), proximityRight.isClose())
-        time.sleep(0.2)
-
-
-
-def testSpeed(speed):
-    
-    left.setSpeed(0)
-    right.setSpeed(0)
-
-    tStart = time.time()
-    # let counters init before applying power
-    tSpeed = tStart + 2.0
-    speedDuration = 5.0
-    stopDuration = 0.3    
-    dt = 0.050 # could adjust depending on speed... or integrate speed over longer time...
-    stopped = True
-
-    while True:
-        t = time.time()
-        
-        if not stopped and t > tSpeed:
-            left.stop()
-            right.stop()
-            print('Stop')
-            
-        if not stopped and t > tSpeed + stopDuration:
-            stopped = True
-            print('Stopped')
-            
-        if stopped and t > tSpeed:
-            left.setSpeed(speed)
-            right.setSpeed(speed)
-            tSpeed = t + speedDuration
-            speed = -speed
-            stopped = False
-            print('Start')
-        
-        
-        # NEED TO STOP ENTIRELY BEFORE THROTTLING BACK UP
-        
-        
-        time.sleep(dt)
-        
-        print('%.3f' % (t - tStart), end=' ') 
-        left.update(True)
-        right.update()
-
-        if 0:
-            # TODO: heading control, regulating difference to 0, adjusting speed for L/R
-            cl = left.counter.count()
-            cr = right.counter.count()
-            #print '%.3f' % (t - tStart), cl, cr, cl - cr
 
 @asyncio.coroutine
 def controlLoop(dt):
