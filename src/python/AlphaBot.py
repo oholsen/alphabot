@@ -211,11 +211,7 @@ class MotorController:
             
     def stop(self):
         self.setSpeed(0)
-            
-
-left  = MotorController('L', Motor(MLIN1, MLIN2, MLEN), Counter(CNTL))
-right = MotorController('R', Motor(MRIN2, MRIN1, MREN), Counter(CNTR))
-
+        self.motor.stop()
 
 
 
@@ -224,12 +220,14 @@ class AlphaBot():
     def __init__(self):
         self.cameraPan = Servo(ServoPanPin, centerAngle = 25)
         self.cameraTilt = Servo(ServoTiltPin, 5)
+        self.left  = MotorController('L', Motor(MLIN1, MLIN2, MLEN), Counter(CNTL))
+        self.right = MotorController('R', Motor(MRIN2, MRIN1, MREN), Counter(CNTR))
         self.setSpeed(0)
 
     def stop(self):
         print("stop")
-        left.stop()
-        right.stop()
+        self.left.stop()
+        self.right.stop()
         self.cameraPan.stop()
         self.cameraTilt.stop()
 
@@ -238,24 +236,23 @@ class AlphaBot():
     
     def setSpeed(self, speed):
         print("speed", speed)
-        left.setSpeed(speed)
-        right.setSpeed(speed)
+        self.left.setSpeed(speed)
+        self.right.setSpeed(speed)
         
     def getSpeed(self):
-        return 0.5 * (left.getSpeed() + right.getSpeed())
+        return 0.5 * (self.left.getSpeed() + self.right.getSpeed())
         
     def setTurnSpeed(self, speed, turnSpeed):
         print("turn", speed, turnSpeed)
-        left.setSpeed(speed + turnSpeed)
-        right.setSpeed(speed - turnSpeed)
+        self.left.setSpeed(speed + turnSpeed)
+        self.right.setSpeed(speed - turnSpeed)
         
     def update(self):
-        left.update()
-        right.update()
+        self.left.update()
+        self.right.update()
         
         
 alphabot = AlphaBot()
-
 
 
 @asyncio.coroutine
