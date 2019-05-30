@@ -295,8 +295,25 @@ def speedLoop(speed):
         yield from asyncio.sleep(5)
 
 
+@asyncio.coroutine
+def wscontrol(websocket, path):
+    import json
+    while True:
+        message = yield from websocket.recv()
+        try:
+            #result = yield from eval(message)
+            result = eval(message)
+            yield from websocket.send(json.dumps(result))
+        except Exception as e:
+            print(str(e))
+            #print(json.dumps(e))
+            yield from websocket.send(json.dumps(str(e)))
+
+
 if __name__ == '__main__':
-    
+
+    import websockets
+
     try:
 
         #testServo(Servo1Pin, -30, +30, 5)
@@ -318,7 +335,8 @@ if __name__ == '__main__':
         loop = asyncio.get_event_loop()
         tasks = [
             asyncio.Task(controlLoop(0.050)),
-            asyncio.Task(speedLoop(args.speed))
+            asyncio.Task(speedLoop(args.speed)),
+            websockets.serve(wscontrol, '0.0.0.0', 8765)
             ]
         #loop.run_forever()
         loop.run_until_complete(asyncio.wait(tasks))
