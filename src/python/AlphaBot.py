@@ -255,10 +255,9 @@ class AlphaBot():
 alphabot = AlphaBot()
 
 
-@asyncio.coroutine
-def controlLoop(dt):
+async def controlLoop(dt):
     while True:
-        yield from asyncio.sleep(dt)
+        await asyncio.sleep(dt)
         #print(alphabot.isClose(), alphabot.getSpeed())        
         if alphabot.isClose() and alphabot.getSpeed() > 0:
             # set speed here and not in task to avoid multiple tasks
@@ -267,81 +266,77 @@ def controlLoop(dt):
         alphabot.update()
 
 
-#@asyncio.coroutine
-def avoidObstacle(speed):
+async def avoidObstacle(speed):
     print("avoidObstacle")
 
-    yield from asyncio.sleep(2.5)
+    await asyncio.sleep(2.5)
 
     alphabot.setTurnSpeed(0, 20)
-    yield from asyncio.sleep(1.5)
+    await asyncio.sleep(1.5)
 
     alphabot.setSpeed(speed)
 
 
-@asyncio.coroutine
-def speedLoop(speed):
+async def speedLoop(speed):
 
-    yield from asyncio.sleep(2)
+    await asyncio.sleep(2)
     
     while True:
         
         alphabot.setSpeed(speed)
         break
         
-        yield from asyncio.sleep(5)
+        await asyncio.sleep(5)
         
         alphabot.setSpeed(-speed)
-        yield from asyncio.sleep(5)
+        await asyncio.sleep(5)
 
 
-@asyncio.coroutine
-def wscontrol(websocket, path):
+async def wscontrol(websocket, path):
     import json
     while True:
-        message = yield from websocket.recv()
+        message = await websocket.recv()
         try:
-            #result = yield from eval(message)
             result = eval(message)
-            yield from websocket.send(json.dumps(result))
+            await websocket.send(json.dumps(result))
         except Exception as e:
             print(str(e))
             #print(json.dumps(e))
-            yield from websocket.send(json.dumps(str(e)))
+            await websocket.send(json.dumps(str(e)))
 
 
 if __name__ == '__main__':
 
     import websockets
 
+
+    #testServo(Servo1Pin, -30, +30, 5)
+    #testServo(Servo2Pin, -90, +90)
+    #testMotor()
+    #testMotorCounter()
+    #testProximity()
+            
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('speed', type=float)
+    args = parser.parse_args()
+    print(args.speed)
+    #testSpeed(args.speed)
+
+    tStart = time.time()    
+    loop = asyncio.get_event_loop()
+
     try:
-
-        #testServo(Servo1Pin, -30, +30, 5)
-        #testServo(Servo2Pin, -90, +90)
-        #testMotor()
-        #testMotorCounter()
-        #testProximity()
-                
-        import argparse
-
-        parser = argparse.ArgumentParser()
-        parser.add_argument('speed', type=float)
-        args = parser.parse_args()
-        print(args.speed)
-        #testSpeed(args.speed)
-
-        tStart = time.time()
-        
-        loop = asyncio.get_event_loop()
+        # alphabot.setSpeed(args.speed)
         tasks = [
             asyncio.Task(controlLoop(0.050)),
             asyncio.Task(speedLoop(args.speed)),
             websockets.serve(wscontrol, '0.0.0.0', 8765)
-            ]
-        #loop.run_forever()
+        ]
         loop.run_until_complete(asyncio.wait(tasks))
-        #loop.close()
-
+        loop.run_forever()
+        print("Loop complete")
     finally:
         loop.stop()
         loop.close()
