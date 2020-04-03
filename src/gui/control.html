@@ -8,11 +8,27 @@
   <link rel="stylesheet" href="style.css">
   <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
   <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
-  
+  <script src="https://canvasjs.com/assets/script/jquery.canvasjs.min.js"></script>
+
   <script>
   $( function() {
 
     $("button").button();
+
+    var options = {
+
+      data: [{
+        type: "column",
+        yValueFormatString: "#,###",
+        indexLabel: "{y}",
+            color: "#546BC1",
+        dataPoints: [
+          { label: "Left", y: 196 },
+          { label: "Right", y: 263 },
+        ]
+      }]
+    };
+    $("#chartContainer").CanvasJSChart(options);
 
     $("#speedSlider").slider({
       orientation: "vertical",
@@ -248,6 +264,8 @@
     </div>
 
   </div>
+
+  <div id="chartContainer" style="height: 370px; width: 100%;"></div>
 
 </fieldset>
 
