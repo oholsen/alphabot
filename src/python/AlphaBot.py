@@ -49,21 +49,15 @@ def clip2(x, lo, hi):
 
 class Servo(object):
 
-    def __init__(self, pin, angle: float = 0, angleRange: float = 60, pulseWidthRange: float = 500):
-        self.angleRange = float(angleRange)
+    def __init__(self, pin, pulseWidthRange: float = 1000):
         self.pulseWidthRange = pulseWidthRange
         self.pin = pin
-        pw = self._pulseWidth(angle)
-        print("pulse width", self.pin, pw)
-        pi.set_servo_pulsewidth(self.pin, pw)
-
-    def _pulseWidth(self, angle: float):
         # neutral is 1.5ms pulse
         # +-0.5ms is 90 degrees, depending on servo
-        return 1500 + self.pulseWidthRange * clip2(angle / self.angleRange, -1, 1)
+        pi.set_servo_pulsewidth(self.pin, 0)  # off
 
-    def setAngle(self, angle):
-        pw = self._pulseWidth(angle)
+    def setPercent(self, percent: float):
+        pw = int(1500 + self.pulseWidthRange * percent / 100.0)
         print("pulse width", self.pin, pw)
         pi.set_servo_pulsewidth(self.pin, pw)
 
@@ -341,10 +335,10 @@ def handle(message):
             alphabot.setSpeed(float(cols[0]))
         elif cmd == "r":
             alphabot.setTurn(float(cols[0]))
-        elif cmd == "pan:":
-            alphabot.cameraPan.setAngle(float(cols[0]))
+        elif cmd == "pan":
+            alphabot.cameraPan.setPercent(23 - float(cols[0]))
         elif cmd == "tilt":
-            alphabot.cameraTilt.setAngle(float(cols[0]))
+            alphabot.cameraTilt.setPercent(float(cols[0]))
         else:
             log.warning("Ignore message %r", message)
     except:

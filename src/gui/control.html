@@ -66,10 +66,10 @@
     });
 
     $("#tiltSlider").slider({
-      value: 0,
-      min: -100,
+      value: 15,
+      min: 15,
       max: 100,
-      step: 2,
+      step: 1,
       slide: function(event, ui) { 
         let value = ui.value
         post("tilt " + value);
@@ -80,27 +80,35 @@
       value: 0,
       min: -100,
       max: 100,
-      step: 2,
+      step: 1,
       slide: function(event, ui) { 
         let value = ui.value
         post("pan " + value);
       },
     });
-
     
     $('#camForward').on('click', function (e) {
       e.preventDefault();
+      $("#panSlider").slider("value", 0);
       post("pan 0");
-      reset();
     });
 
-    const config = document.getElementById("config");
+    const logBox = document.getElementById("log");
     const inputBox = document.getElementById("command");
     const form = document.getElementById("form");
 
-    function debug(message) {
-      config.value += message + "\n";
-      config.scrollTop = config.scrollHeight;
+    function status(message) {
+
+      logBox.value += message + "\n";
+      logBox.scrollTop = logBox.scrollHeight;
+
+      let o = JSON.parse(message);
+      var dps = options.data[0].dataPoints;
+      dps[0].y = o.stopped ? 0 : o.motorLeft.power;
+      dps[1].y = o.stopped ? 0 : o.motorRight.power;
+      options.data[0].dataPoints = dps;
+      $("#chartContainer").CanvasJSChart().render();
+
     }
 
     function reset() {
@@ -187,8 +195,8 @@
         
         s.onmessage = function (e) {
           const message = e.data;
-          console.log("Websocket message:", message);
-          debug(message);
+          // console.log("Websocket message:", message);
+          status(message);
         };
         
         s.onerror = function (e) {
@@ -258,7 +266,7 @@
     </div>
   </fieldset>
 
-  <textarea id="config" rows="8" readonly></textarea>
+  <textarea id="log" rows="8" readonly></textarea>
 
   <form id="form">
     <input type="text" id="command">
